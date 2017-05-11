@@ -1,0 +1,8 @@
+'\"
+.so man.macros
+.TH tserialport n 1.0 "Tcl-Extensions"
+.HS tserialport tcl
+.BS
+'\" Note:  do not modify the .SH NAME line immediately below!
+.SH NAME
+tserialport \- tcl package
