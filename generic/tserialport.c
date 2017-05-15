@@ -63,7 +63,7 @@
 #define TRUE (!FALSE)
 #endif
 
-static char rcs[] = "@(#)tserialport.c $Revision: 1.1 $ $Date: 2017/05/11 08:11:16 $ (BSD 3 License) Alexander Schoepe, Bochum, DE";
+static char rcs[] = "@(#)tserialport.c $Revision: 1.2 $ $Date: 2017/05/15 12:45:30 $ (BSD 3 License) Alexander Schoepe, Bochum, DE";
 
 
 static int Tserialport_Getports (ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]) {
@@ -74,8 +74,23 @@ static int Tserialport_Getports (ClientData clientData, Tcl_Interp *interp, int 
   int i = 0, en, mode = SP_MODE_READ;
   int usb_bus, usb_address, usb_vid, usb_pid, baudrate, bits, stopbits;
   char *cp, *name, *description, *manufacturer, *product, *serial, *bluetooth;
-
   Tcl_Obj *dObjPtr = Tcl_NewDictObj();
+
+  static const char *const command[] = {
+    "open", NULL
+  };
+  enum command {
+    TSP_OPEN, TSP_IGNORE
+  } cmd;
+  cmd = TSP_IGNORE;
+
+  if (objc > 2) {
+    Tcl_WrongNumArgs(interp, 1, objv, "?open?");
+    return TCL_ERROR;
+  }
+  if (objc == 2) {
+    if (Tcl_GetIndexFromObj(interp, objv[1], command, "command", 0, (int *)&cmd) != TCL_OK) return TCL_ERROR;
+  }
 
   if ((rc = sp_new_config(&conf)) == SP_OK) {
     if ((rc = sp_list_ports(&ports)) == SP_OK) {
@@ -133,195 +148,197 @@ static int Tserialport_Getports (ClientData clientData, Tcl_Interp *interp, int 
 	  Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_ObjPrintf("0x%x", usb_address));
 	}
 
-	if ((rc = sp_open(port, mode)) == SP_OK) {
-	  keyv[1] = Tcl_NewStringObj("open", -1);
-	  Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj("true", -1));
+	switch (sp_get_port_transport(port)) {
+	  case SP_TRANSPORT_NATIVE:
+	    cp = "native";
+	    break;
+	  case SP_TRANSPORT_USB:
+	    cp = "usb";
+	    break;
+	  case SP_TRANSPORT_BLUETOOTH:
+	    cp = "bluetooth";
+	    break;
+	  default:
+	    cp = "unknown";
+	}
+	keyv[1] = Tcl_NewStringObj("transport", -1);
+	Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
 
-	  switch (sp_get_port_transport(port)) {
-	    case SP_TRANSPORT_NATIVE:
-	      cp = "native";
-	      break;
-	    case SP_TRANSPORT_USB:
-	      cp = "usb";
-	      break;
-	    case SP_TRANSPORT_BLUETOOTH:
-	      cp = "bluetooth";
-	      break;
-	    default:
-	      cp = "unknown";
+	if (cmd == TSP_OPEN) {
+	  if ((rc = sp_open(port, mode)) == SP_OK) {
+	    keyv[1] = Tcl_NewStringObj("open", -1);
+	    Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj("true", -1));
+
+	    if (sp_get_config(port, conf) == SP_OK) {
+	      if (sp_get_config_baudrate(conf, &baudrate) == SP_OK) {
+		keyv[1] = Tcl_NewStringObj("baudrate", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewIntObj(baudrate));
+	      }
+
+	      if (sp_get_config_bits(conf, &bits) == SP_OK) {
+		keyv[1] = Tcl_NewStringObj("bits", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewIntObj(bits));
+	      }
+
+	      if (sp_get_config_parity(conf, &en) == SP_OK) {
+		switch (en) {
+		  case SP_PARITY_INVALID:
+		    cp = "invalid";
+		    break;
+		  case SP_PARITY_NONE:
+		    cp = "none";
+		    break;
+		  case SP_PARITY_ODD:
+		    cp = "odd";
+		    break;
+		  case SP_PARITY_EVEN:
+		    cp = "even";
+		    break;
+		  case SP_PARITY_MARK:
+		    cp = "mark";
+		    break;
+		  case SP_PARITY_SPACE:
+		    cp = "space";
+		    break;
+		  default:
+		    cp = "unknown";
+		}
+		keyv[1] = Tcl_NewStringObj("parity", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
+	      }
+
+	      if (sp_get_config_stopbits(conf, &stopbits) == SP_OK) {
+		keyv[1] = Tcl_NewStringObj("stopbits", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewIntObj(stopbits));
+	      }
+
+	      if (sp_get_config_cts(conf, &en) == SP_OK) {
+		switch (en) {
+		  case SP_CTS_INVALID:
+		    cp = "invalid";
+		    break;
+		  case SP_CTS_IGNORE:
+		    cp = "ignore";
+		    break;
+		  case SP_CTS_FLOW_CONTROL:
+		    cp = "flow control";
+		    break;
+		  default:
+		    cp = "unknown";
+		}
+		keyv[1] = Tcl_NewStringObj("cts", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
+	      }
+
+	      if (sp_get_config_dsr(conf, &en) == SP_OK) {
+		switch (en) {
+		  case SP_DSR_INVALID:
+		    cp = "invalid";
+		    break;
+		  case SP_DSR_IGNORE:
+		    cp = "ignore";
+		    break;
+		  case SP_DSR_FLOW_CONTROL:
+		    cp = "flow control";
+		    break;
+		  default:
+		    cp = "unknown";
+		}
+		keyv[1] = Tcl_NewStringObj("dsr", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
+	      }
+
+	      if (sp_get_config_dtr(conf, &en) == SP_OK) {
+		switch (en) {
+		  case SP_DTR_INVALID:
+		    cp = "invalid";
+		    break;
+		  case SP_DTR_OFF:
+		    cp = "off";
+		    break;
+		  case SP_DTR_ON:
+		    cp = "on";
+		    break;
+		  case SP_DTR_FLOW_CONTROL:
+		    cp = "flow control";
+		    break;
+		  default:
+		    cp = "unknown";
+		}
+		keyv[1] = Tcl_NewStringObj("dtr", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
+	      }
+
+	      if (sp_get_config_rts(conf, &en) == SP_OK) {
+		switch (en) {
+		  case SP_RTS_INVALID:
+		    cp = "invalid";
+		    break;
+		  case SP_RTS_OFF:
+		    cp = "off";
+		    break;
+		  case SP_RTS_ON:
+		    cp = "on";
+		    break;
+		  case SP_RTS_FLOW_CONTROL:
+		    cp = "flow control";
+		    break;
+		  default:
+		    cp = "unknown";
+		}
+		keyv[1] = Tcl_NewStringObj("rts", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
+	      }
+
+	      if (sp_get_config_xon_xoff(conf, &en) == SP_OK) {
+		switch (en) {
+		  case SP_XONXOFF_INVALID:
+		    cp = "invalid";
+		    break;
+		  case SP_XONXOFF_DISABLED:
+		    cp = "disabled";
+		    break;
+		  case SP_XONXOFF_IN:
+		    cp = "in";
+		    break;
+		  case SP_XONXOFF_OUT:
+		    cp = "out";
+		    break;
+		  case SP_XONXOFF_INOUT:
+		    cp = "in out";
+		    break;
+		  default:
+		    cp = "unknown";
+		}
+		keyv[1] = Tcl_NewStringObj("xon_xoff", -1);
+		Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
+	      }
+	    }
+
+	    sp_close(port);
+	  } else {
+	    switch (rc) {
+	      case SP_OK:
+		cp = "operation completed successfully";
+		break;
+	      case SP_ERR_ARG:
+		cp = "invalid arguments were passed to the function";
+		break;
+	      case SP_ERR_FAIL:
+		cp = "a system error occurred while executing the operation";
+		break;
+	      case SP_ERR_MEM:
+		cp = "a memory allocation failed while executing the operation";
+		break;
+	      case SP_ERR_SUPP:
+		cp = "the requested operation is not supported by this system or device";
+		break;
+	      default:
+		cp = "unknown";
+	    }
+	    keyv[1] = Tcl_NewStringObj("open", -1);
+	    Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
 	  }
-	  keyv[1] = Tcl_NewStringObj("transport", -1);
-	  Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-
-	  if (sp_get_config(port, conf) == SP_OK) {
-	    if (sp_get_config_baudrate(conf, &baudrate) == SP_OK) {
-	      keyv[1] = Tcl_NewStringObj("baudrate", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewIntObj(baudrate));
-	    }
-
-	    if (sp_get_config_bits(conf, &bits) == SP_OK) {
-	      keyv[1] = Tcl_NewStringObj("bits", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewIntObj(bits));
-	    }
-
-	    if (sp_get_config_parity(conf, &en) == SP_OK) {
-	      switch (en) {
-		case SP_PARITY_INVALID:
-		  cp = "invalid";
-		  break;
-		case SP_PARITY_NONE:
-		  cp = "none";
-		  break;
-		case SP_PARITY_ODD:
-		  cp = "odd";
-		  break;
-		case SP_PARITY_EVEN:
-		  cp = "even";
-		  break;
-		case SP_PARITY_MARK:
-		  cp = "mark";
-		  break;
-		case SP_PARITY_SPACE:
-		  cp = "space";
-		  break;
-		default:
-		  cp = "unknown";
-	      }
-	      keyv[1] = Tcl_NewStringObj("parity", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-	    }
-
-	    if (sp_get_config_stopbits(conf, &stopbits) == SP_OK) {
-	      keyv[1] = Tcl_NewStringObj("stopbits", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewIntObj(stopbits));
-	    }
-
-	    if (sp_get_config_cts(conf, &en) == SP_OK) {
-	      switch (en) {
-		case SP_CTS_INVALID:
-		  cp = "invalid";
-		  break;
-		case SP_CTS_IGNORE:
-		  cp = "ignore";
-		  break;
-		case SP_CTS_FLOW_CONTROL:
-		  cp = "flow control";
-		  break;
-		default:
-		  cp = "unknown";
-	      }
-	      keyv[1] = Tcl_NewStringObj("cts", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-	    }
-
-	    if (sp_get_config_dsr(conf, &en) == SP_OK) {
-	      switch (en) {
-		case SP_DSR_INVALID:
-		  cp = "invalid";
-		  break;
-		case SP_DSR_IGNORE:
-		  cp = "ignore";
-		  break;
-		case SP_DSR_FLOW_CONTROL:
-		  cp = "flow control";
-		  break;
-		default:
-		  cp = "unknown";
-	      }
-	      keyv[1] = Tcl_NewStringObj("dsr", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-	    }
-
-	    if (sp_get_config_dtr(conf, &en) == SP_OK) {
-	      switch (en) {
-		case SP_DTR_INVALID:
-		  cp = "invalid";
-		  break;
-		case SP_DTR_OFF:
-		  cp = "off";
-		  break;
-		case SP_DTR_ON:
-		  cp = "on";
-		  break;
-		case SP_DTR_FLOW_CONTROL:
-		  cp = "flow control";
-		  break;
-		default:
-		  cp = "unknown";
-	      }
-	      keyv[1] = Tcl_NewStringObj("dtr", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-	    }
-
-	    if (sp_get_config_rts(conf, &en) == SP_OK) {
-	      switch (en) {
-		case SP_RTS_INVALID:
-		  cp = "invalid";
-		  break;
-		case SP_RTS_OFF:
-		  cp = "off";
-		  break;
-		case SP_RTS_ON:
-		  cp = "on";
-		  break;
-		case SP_RTS_FLOW_CONTROL:
-		  cp = "flow control";
-		  break;
-		default:
-		  cp = "unknown";
-	      }
-	      keyv[1] = Tcl_NewStringObj("rts", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-	    }
-
-	    if (sp_get_config_xon_xoff(conf, &en) == SP_OK) {
-	      switch (en) {
-		case SP_XONXOFF_INVALID:
-		  cp = "invalid";
-		  break;
-		case SP_XONXOFF_DISABLED:
-		  cp = "disabled";
-		  break;
-		case SP_XONXOFF_IN:
-		  cp = "in";
-		  break;
-		case SP_XONXOFF_OUT:
-		  cp = "out";
-		  break;
-		case SP_XONXOFF_INOUT:
-		  cp = "in out";
-		  break;
-		default:
-		  cp = "unknown";
-	      }
-	      keyv[1] = Tcl_NewStringObj("xon_xoff", -1);
-	      Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
-	    }
-	  }
-
-	  sp_close(port);
-	} else {
-	  switch (rc) {
-	    case SP_OK:
-	      cp = "operation completed successfully";
-	      break;
-	    case SP_ERR_ARG:
-	      cp = "invalid arguments were passed to the function";
-	      break;
-	    case SP_ERR_FAIL:
-	      cp = "a system error occurred while executing the operation";
-	      break;
-	    case SP_ERR_MEM:
-	      cp = "a memory allocation failed while executing the operation";
-	      break;
-	    case SP_ERR_SUPP:
-	      cp = "the requested operation is not supported by this system or device";
-	      break;
-	    default:
-	      cp = "unknown";
-	  }
-	  keyv[1] = Tcl_NewStringObj("open", -1);
-	  Tcl_DictObjPutKeyList(interp, dObjPtr, 2, keyv, Tcl_NewStringObj(cp, -1));
 	}
 	port = ports[++i];
       }
