@@ -63,8 +63,6 @@
 #define TRUE (!FALSE)
 #endif
 
-static char rcs[] = "@(#)tserialport.c $Revision: 1.2 $ $Date: 2017/05/15 12:45:30 $ (BSD 3 License) Alexander Schoepe, Bochum, DE";
-
 
 static int Tserialport_Getports (ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]) {
   Tcl_Obj *keyv[2];
@@ -352,12 +350,6 @@ static int Tserialport_Getports (ClientData clientData, Tcl_Interp *interp, int 
 }
 
 
-static int Tserialport_RcsId (ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *const objv[]) {
-  Tcl_SetObjResult(interp, Tcl_NewStringObj(rcs, -1));
-  return TCL_OK;
-}
-
-
 #ifdef _WIN32
 DECLSPEC_EXPORT
 #endif
@@ -369,7 +361,6 @@ int Tserialport_Init(Tcl_Interp *interp) {
 #endif
 
   Tcl_CreateObjCommand(interp, "::tserialport::getports", Tserialport_Getports, (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
-  Tcl_CreateObjCommand(interp, "::tserialport::rcsid", Tserialport_RcsId, (ClientData)NULL, (Tcl_CmdDeleteProc *)NULL);
 
   Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION);
   return TCL_OK;
