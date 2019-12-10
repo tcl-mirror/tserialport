@@ -12,7 +12,7 @@
        http://sigrok.org/wiki/Libserialport
 	   
 
-    Copyright (C) 2017 Alexander Schoepe, Bochum, DE, <schoepe@users.sourceforge.net>
+    Copyright (C) 2017-2019 Alexander Schoepe, Bochum, DE, <alx.tcl@sowaswie.de>
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without modification,

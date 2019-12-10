@@ -1,18 +1,17 @@
 
-  tserialport - tcl package of the public domain NaCl/TweetNaCl crypto library
-	 (backend license BSD-3 since May 2013; see also LICENSE.nacl)
-	 https://nacl.cr.yp.to & https://tweetnacl.cr.yp.to 20140427
+  tserialport - tcl package of the library libserialport
 
-	 http://wiki.tcl.tk/47681
-	 https://sourceforge.net/projects/tclsnippets/files/nacl/
+       libserialport is a minimal, cross-platform shared library written in C that
+       is intended to take care of the OS-specific details when writing software
+       that uses serial ports. It is licensed under the terms of the GNU Lesser
+       General Public License, version 3 or later. Note: While libserialport is
+       hosted on sigrok.org (and sigrok uses libserialport), this is a completely
+       independent library that can be used by other projects as well. The
+       libserialport library does not depend on any sigrok related libraries or
+       projects. The tcl package is licensed under the terms of the BSD-3 License.
+       http://sigrok.org/wiki/Libserialport
 
-  NaCl: Networking and Cryptography library (pronounced "salt")
-
-  The core NaCl development team consists of Daniel J. Bernstein (University of
-  Illinois at Chicago and Technische Universiteit Eindhoven), Tanja Lange (Technische
-  Universiteit Eindhoven), and Peter Schwabe (Radboud Universiteit Nijmegen).
-
-  Copyright (C) 2016 Alexander Schoepe, Bochum, DE, <schoepe@users.sourceforge.net>
+  Copyright (C) 2017-2019 Alexander Schoepe, Bochum, DE, <alx.tcl@sowaswie.de>
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification,
