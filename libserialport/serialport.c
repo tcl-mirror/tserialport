@@ -75,6 +75,20 @@ SP_API enum sp_return sp_get_port_by_name(const char *portname, struct sp_port *
 
 	DEBUG_FMT("Building structure for port %s", portname);
 
+#if !defined(_WIN32) && defined(HAVE_REALPATH)
+	/*
+	 * get_port_details() below tries to be too smart and figure out
+	 * some transport properties from the port name which breaks with
+	 * symlinks. Therefore we canonicalize the portname first.
+	 */
+	char pathbuf[PATH_MAX + 1];
+	char *res = realpath(portname, pathbuf);
+	if (!res)
+		RETURN_ERROR(SP_ERR_ARG, "Could not retrieve realpath behind port name");
+
+	portname = pathbuf;
+#endif
+
 	if (!(port = malloc(sizeof(struct sp_port))))
 		RETURN_ERROR(SP_ERR_MEM, "Port structure malloc failed");
 
@@ -717,6 +731,27 @@ SP_API enum sp_return sp_drain(struct sp_port *port)
 #endif
 }
 
+#ifdef _WIN32
+static enum sp_return await_write_completion(struct sp_port *port)
+{
+	TRACE("%p", port);
+	DWORD bytes_written;
+	BOOL result;
+
+	/* Wait for previous non-blocking write to complete, if any. */
+	if (port->writing) {
+		DEBUG("Waiting for previous write to complete");
+		result = GetOverlappedResult(port->hdl, &port->write_ovl, &bytes_written, TRUE);
+		port->writing = 0;
+		if (!result)
+			RETURN_FAIL("Previous write failed to complete");
+		DEBUG("Previous write completed");
+	}
+
+	RETURN_OK();
+}
+#endif
+
 SP_API enum sp_return sp_blocking_write(struct sp_port *port, const void *buf,
                                         size_t count, unsigned int timeout_ms)
 {
@@ -739,17 +774,8 @@ SP_API enum sp_return sp_blocking_write(struct sp_port *port, const void *buf,
 
 #ifdef _WIN32
 	DWORD bytes_written = 0;
-	BOOL result;
 
-	/* Wait for previous non-blocking write to complete, if any. */
-	if (port->writing) {
-		DEBUG("Waiting for previous write to complete");
-		result = GetOverlappedResult(port->hdl, &port->write_ovl, &bytes_written, TRUE);
-		port->writing = 0;
-		if (!result)
-			RETURN_FAIL("Previous write failed to complete");
-		DEBUG("Previous write completed");
-	}
+	TRY(await_write_completion(port));
 
 	/* Set timeout. */
 	if (port->timeouts.WriteTotalTimeoutConstant != timeout_ms) {

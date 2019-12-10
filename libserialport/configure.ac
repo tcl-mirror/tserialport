@@ -95,6 +95,9 @@ AM_CONDITIONAL([FREEBSD], [test -z "${host_os##freebsd*}"])
 AM_COND_IF([WIN32], [SP_LIBS='-lsetupapi'], [SP_LIBS=])
 AC_SUBST([SP_LIBS])
 
+AM_COND_IF([FREEBSD], [SP_PKGLIBS='libusb-2.0'], [SP_PKGLIBS=])
+AC_SUBST([SP_PKGLIBS])
+
 AM_COND_IF([MACOSX], [AC_CHECK_HEADER([IOKit/IOKitLib.h], [],
 	[AC_MSG_ERROR([IOKit/IOKitLib.h not found])])])
 
@@ -122,6 +125,9 @@ AC_CHECK_DECLS([BOTHER],,, [[#include <linux/termios.h>]])
 
 # Check for serial_struct.
 AC_CHECK_TYPES([struct serial_struct],,, [[#include <linux/serial.h>]])
+
+# Check for realpath().
+AC_CHECK_FUNC([realpath], [AC_DEFINE(HAVE_REALPATH, 1, [realpath is available.])], [])
 
 AC_CACHE_CHECK([for visibility control], [sp_cv_visibility_control], [
 	sp_saved_CFLAGS=$CFLAGS

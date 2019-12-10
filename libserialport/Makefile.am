@@ -23,7 +23,7 @@ AM_LIBTOOLFLAGS = --silent
 GNUMAKEFLAGS = --no-print-directory
 
 # Enable more compiler warnings.
-AM_CFLAGS = -std=c99 -Wall -Wextra -pedantic -Wmissing-prototypes -Wshadow -fPIC
+AM_CFLAGS = -std=c99 -Wall -Wextra -pedantic -Wmissing-prototypes -Wshadow
 
 lib_LTLIBRARIES = libserialport.la
 

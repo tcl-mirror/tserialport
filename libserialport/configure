@@ -635,6 +635,7 @@ ac_subst_vars='am__EXEEXT_FALSE
 am__EXEEXT_TRUE
 LTLIBOBJS
 LIBOBJS
+SP_PKGLIBS
 SP_LIBS
 FREEBSD_FALSE
 FREEBSD_TRUE
@@ -13134,6 +13135,13 @@ else
 fi
 
 
+if test -z "$FREEBSD_TRUE"; then :
+  SP_PKGLIBS='libusb-2.0'
+else
+  SP_PKGLIBS=
+fi
+
+
 if test -z "$MACOSX_TRUE"; then :
   ac_fn_c_check_header_mongrel "$LINENO" "IOKit/IOKitLib.h" "ac_cv_header_IOKit_IOKitLib_h" "$ac_includes_default"
 if test "x$ac_cv_header_IOKit_IOKitLib_h" = xyes; then :
@@ -13462,6 +13470,15 @@ cat >>confdefs.h <<_ACEOF
 #define HAVE_STRUCT_SERIAL_STRUCT 1
 _ACEOF
 
+
+fi
+
+
+# Check for realpath().
+ac_fn_c_check_func "$LINENO" "realpath" "ac_cv_func_realpath"
+if test "x$ac_cv_func_realpath" = xyes; then :
+
+$as_echo "#define HAVE_REALPATH 1" >>confdefs.h
 
 fi
 
